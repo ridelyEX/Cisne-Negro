@@ -52,6 +52,7 @@ class SubmitDemographicData(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=4, max_length=255)
     nombres: str = Field(min_length=1)
+    num_empleado: int = Field(min_length=1)
     curp: str = Field(min_length=18, max_length=18)
     apellido_p: str = Field(min_length=1)
     apellido_m: str = Field(min_length=1)

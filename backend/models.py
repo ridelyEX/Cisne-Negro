@@ -10,6 +10,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default='user') # 'admin' or 'user'
+    num_empleado = Column (String(10), nullable=False)
 
     respondents = relationship("Respondent", back_populates="user")
 

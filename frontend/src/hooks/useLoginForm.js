@@ -12,6 +12,7 @@ export const useLoginForm = (onLogin) => {
   const [profile, setProfile] = useState({
     nombres: '',
     curp: '',
+    num_empleado: '',
     apellido_p: '',
     apellido_m: '',
     dependencia: '',
@@ -65,6 +66,7 @@ export const useLoginForm = (onLogin) => {
 
     const required = [
       'nombres',
+      'num_empleado',
       'apellido_p',
       'apellido_m',
       'curp',
@@ -100,6 +102,7 @@ export const useLoginForm = (onLogin) => {
         username: usernameVal,
         password,
         nombres: profile.nombres,
+        num_empleado: profile.num_empleado,
         curp: profile.curp.trim().toUpperCase(),
         apellido_p: profile.apellido_p,
         apellido_m: profile.apellido_m,
