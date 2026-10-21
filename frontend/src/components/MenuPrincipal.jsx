@@ -14,10 +14,14 @@ const MenuPrincipal = ({ user, onLogout }) => {
       <div className="glass-card" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
         <div style={{ marginBottom: '3rem' }}>
           <h1>Bienvenido</h1>
-          <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>¿Qué deseas hacer?</p>
+          <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+            Esta plataforma es para identificar factores laborales que podrían afectan tu bienestar.
+            Tu participación nos ayuda a prevenir riesgos psicosociales y
+            construir un entorno de trabajo más seguro y saludable.
+          </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: user.role === 'admin' ? '1fr 1fr': '1fr', gap: '1.5rem', marginBottom: '2rem', justifyItems: 'center' }}>
           {user.role !== 'admin' && (
             <button
               onClick={() => navigate('/cuestionario')}
@@ -28,8 +32,10 @@ const MenuPrincipal = ({ user, onLogout }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '2rem',
+                fontSize: '1rem',
                 height: '200px',
-                fontSize: '1rem'
+                width: '100%',
+                maxWidth: '260px'
               }}
             >
               <ClipboardList size={48} style={{ marginBottom: '1rem' }} />

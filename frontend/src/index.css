@@ -226,3 +226,20 @@ input:focus, select:focus {
   color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
+
+.anonimos-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.anonimos-label {
+  display: inline-block;
+  margin: 0;
+}
+
+.anonimos-check {
+  width: auto !important;
+  margin: 0;
+  flex-shrink: 0;
+}

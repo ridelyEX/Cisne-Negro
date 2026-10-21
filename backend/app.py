@@ -52,7 +52,7 @@ class SubmitDemographicData(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=4, max_length=255)
     nombres: str = Field(min_length=1)
-    num_empleado: int = Field(min_length=1)
+    num_empleado: str = Field(min_length=1, max_length=10)
     curp: str = Field(min_length=18, max_length=18)
     apellido_p: str = Field(min_length=1)
     apellido_m: str = Field(min_length=1)
@@ -67,6 +67,7 @@ class SubmitDemographicData(BaseModel):
 class SubmitQuestionsData(BaseModel):
     respondent_id: int
     autor_acoso: str = 'No aplica'
+    anonimo: bool = True
     answers: Dict[str, int]
 
     @field_validator('answers')
@@ -104,6 +105,7 @@ def submit_evaluation(data: SubmitQuestionsData, db: Session = Depends(get_db)):
     suma_total = 0
     neap = 0
     q_columns = {}
+    anonimo = data.anonimo
 
     for i in range(1, 44):
         val = int(data.answers.get(f'q{i}', 0))
@@ -127,6 +129,7 @@ def submit_evaluation(data: SubmitQuestionsData, db: Session = Depends(get_db)):
     # Guardar evaluación
     evaluation = Evaluation(
         respondent_id=data.respondent_id,
+        anonimo=data.anonimo,
         autor_acoso=data.autor_acoso,
         neap=neap,
         imap_score=imap,
@@ -157,7 +160,8 @@ def create_user(data: SubmitDemographicData, db: Session = Depends(get_db)):
     new_user = User(
         username=data.username,
         password_hash=hash_password(data.password),
-        role="user"
+        role="user",
+        num_empleado=str(data.num_empleado)
     )
     db.add(new_user)
     db.commit()
@@ -209,6 +213,26 @@ def get_statistics(db: Session = Depends(get_db)):
             "imap": round(avg_imap, 2),
             "igap": round(avg_igap, 2)
         }
+    }
+
+@app.get("/api/num-empleado/search")
+def search_num_empleados(query: str = "", db: Session = Depends(get_db)):
+    if query:
+        users = db.query(User).filter(
+            User.num_empleado.ilike(f"%{query}%")
+        ).all()
+    else:
+        users = db.query(User).all()
+
+    return {
+        "empleados": [
+            {
+                "num_empleado": user.num_empleado,
+                "username": user.username,
+                "id": user.id
+            }
+            for user in users
+        ]
     }
 
 if __name__ == '__main__':

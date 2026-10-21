@@ -12,9 +12,14 @@ export const useCisnerosForm = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [autorAcoso, setAutorAcoso] = useState('No aplica');
+  const [anonimo, setAnonimo] = useState(true);
 
   const handleAutorAcosoChange = (e) => {
     setAutorAcoso(e.target.value);
+  };
+
+  const handleAnonimo = (e) => {
+    setAnonimo(e.target.checked);
   };
 
   const handleAnswer = (questionId, value) => {
@@ -53,6 +58,7 @@ export const useCisnerosForm = () => {
       const response = await axios.post(`${API_BASE_URL}/api/Cuestionario-cisneros`, {
         respondent_id: respondentId,
         autor_acoso: autorAcoso,
+        anonimo,
         answers
       });
 
@@ -75,6 +81,8 @@ export const useCisnerosForm = () => {
     result,
     loading,
     autorAcoso,
+    anonimo,
+    handleAnonimo,
     handleAutorAcosoChange,
     handleAnswer,
     handleSubmit,

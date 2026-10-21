@@ -9,6 +9,8 @@ const CisnerosFormO = () => {
     result,
     loading,
     autorAcoso,
+    anonimo,
+    handleAnonimo,
     handleAutorAcosoChange,
     handleAnswer,
     handleSubmit,
@@ -26,16 +28,22 @@ const CisnerosFormO = () => {
   return (
     <div className="container">
       <div className="glass-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-          <label>Autor del acoso</label>
-          <select value={autorAcoso} onChange={handleAutorAcosoChange}>
-            <option value="No aplica">No aplica</option>
-            <option value="Jefe inmediato">Jefe inmediato</option>
-            <option value="Compañero">Compañero</option>
-            <option value="Subordinado">Subordinado</option>
-            <option value="Cliente / Usuario">Cliente / Usuario</option>
-            <option value="Otro">Otro</option>
-          </select>
+
+        <div
+          className="form-group anonimos-row"
+          style={{ marginBottom: '1.5rem' }}
+        >
+          <label htmlFor="anonimos" className="anonimos-label">
+            ¿Mantener datos anónimos?
+          </label>
+          <input
+            type="checkbox"
+            id="anonimos"
+            name="anonimo"
+            checked={anonimo}
+            onChange={handleAnonimo}
+            className="anonimos-check"
+          />
         </div>
 
         <Questionnaire

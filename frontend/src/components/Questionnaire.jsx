@@ -7,7 +7,7 @@ export const Questionnaire = ({ questions, answers, onAnswer, onBack, onSubmit, 
     <div>
       <h2>Cuestionario Escala Cisneros</h2>
       <p style={{ marginBottom: '2rem' }}>
-        Señale el grado de frecuencia con que se producen estos hostigamientos.
+        Señale el grado de frecuencia con que se producen estas situaciones.
         (0 = Nunca, 6 = Todos los días)
       </p>
 

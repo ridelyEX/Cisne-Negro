@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
@@ -10,7 +10,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default='user') # 'admin' or 'user'
-    num_empleado = Column (String(10), nullable=False)
+    num_empleado = Column (String(10), nullable=True)
 
     respondents = relationship("Respondent", back_populates="user")
 
@@ -36,6 +36,7 @@ class Evaluation(Base):
     __tablename__ = 'evaluations'
     id = Column(Integer, primary_key=True, autoincrement=True)
     respondent_id = Column(Integer, ForeignKey("respondents.id"), nullable=False) # Refers to Respondent.id
+    anonimo = Column(Boolean, default=True, nullable=False)
 
     q1 = Column(Integer, nullable=False)
     q2 = Column(Integer, nullable=False)

@@ -1,5 +1,7 @@
 import { FormInput } from './FormInput';
 import { FormSelect } from './FormSelect';
+import { NumEmpleadosSearch } from './NumEmpleadosSearch';
+
 
 export const ProfileForm = ({ profile, errors = {}, onChange }) => {
   const coordinacionOptions = [
@@ -62,13 +64,10 @@ export const ProfileForm = ({ profile, errors = {}, onChange }) => {
   return (
     <div>
 
-      <FormInput
-        label="Número de empleado"
-        name="num_empleado"
+      <NumEmpleadosSearch
         value={profile.num_empleado}
         onChange={onChange}
         error={errors.num_empleado}
-        maxLength={6}
       />
 
       <h2>Datos Demográficos</h2>
