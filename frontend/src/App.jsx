@@ -13,19 +13,34 @@ function App() {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const username = localStorage.getItem('username');
+    const privacyAccepted = localStorage.getItem("privacyAccepted") === "true";
+
     if (token) {
-      setUser({ token, role, username });
+      setUser({ token, role, username, privacyAccepted });
     }
   }, []);
 
   const handleLogin = (userData) => {
-    setUser(userData);
+      const nextUser = {
+        ...userData,
+        privacyAccepted: localStorage.getItem("privacyAccepted") === "true"
+      };
+    setUser(nextUser);
+  };
+
+  const handlePrivacyAccepted = () => {
+    const nextUser = {
+        ...user,
+        privacyAccepted: true
+    };
+    setUser(nextUser);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('username');
+    localStorage.removeItem('privacyAccepted');
     setUser(null);
   };
 
@@ -54,12 +69,16 @@ function App() {
 
         <Route
           path="/menu"
-          element={user ? <MenuPrincipal user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+          element={user ? <MenuPrincipal user={user} onLogout={handleLogout} onPrivacyAccepted={handlePrivacyAccepted} /> : <Navigate to="/login" />}
         />
         
         <Route 
           path="/cuestionario" 
-          element={user && user.role !== 'admin' ? <CisnerosFormO /> : <Navigate to="/login" />}
+          element={
+              user && user.role !== 'admin' && user.privacyAccepted
+              ? <CisnerosFormO />
+              : <Navigate to="/menu" replace />
+          }
         />
         
         <Route 

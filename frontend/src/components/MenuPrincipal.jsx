@@ -1,15 +1,54 @@
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Settings, LogOut } from 'lucide-react';
+import AvisoPrivacidadModal from './AvisoPrivacidadModal';
+import { useAvisoPrivacidad } from '../hooks/useAvisoPrivacidad';
 
-const MenuPrincipal = ({ user, onLogout }) => {
+const MenuPrincipal = ({ user, onLogout, onPrivacyAccepted }) => {
   const navigate = useNavigate();
 
+  const { isOpen, accepted, shouldShowModal, openModal, closeModal, accept, setAccepted } =
+    useAvisoPrivacidad(user?.role);
+
+  const handleStartQuestionnaire = () => {
+      if (user?.role === 'admin') {
+        navigate('/admin');
+        return;
+      }
+
+    if (!user?.privacyAccepted) {
+        openModal();
+        return;
+    }
+
+    navigate("/cuestionario");
+  };
+
+  const handleAcceptConsent = () => {
+    accept();
+    if (typeof onPrivacyAccepted === 'function') {
+        onPrivacyAccepted();
+    }
+    navigate("/cuestionario");
+  };
+
   const handleLogout = () => {
+    localStorage.removeItem("privacyAccepted");
     onLogout();
     navigate('/login');
   };
 
   return (
+    <>
+        {shouldShowModal && (
+            <AvisoPrivacidadModal
+                isOpen={isOpen}
+                accepted={accepted}
+                setAccepted={setAccepted}
+                onClose={closeModal}
+                onAccept={handleAcceptConsent}
+            />
+        )}
+
     <div className="container" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="glass-card" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
         <div style={{ marginBottom: '3rem' }}>
@@ -24,7 +63,7 @@ const MenuPrincipal = ({ user, onLogout }) => {
         <div style={{ display: 'grid', gridTemplateColumns: user.role === 'admin' ? '1fr 1fr': '1fr', gap: '1.5rem', marginBottom: '2rem', justifyItems: 'center' }}>
           {user.role !== 'admin' && (
             <button
-              onClick={() => navigate('/cuestionario')}
+              onClick={handleStartQuestionnaire}
               className="btn"
               style={{
                 display: 'flex',
@@ -81,6 +120,7 @@ const MenuPrincipal = ({ user, onLogout }) => {
         </button>
       </div>
     </div>
+  </>
   );
 };
 
