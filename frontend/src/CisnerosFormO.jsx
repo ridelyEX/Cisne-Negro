@@ -17,6 +17,10 @@ const CisnerosFormO = () => {
     resetForm
   } = useCisnerosForm();
 
+  const missingQuestionIds = questions
+    .map((q) => q.id)
+    .filter((id) => answers[`q${id}`] === undefined);
+
   if (result) {
     return (
       <div className="container">
@@ -52,6 +56,7 @@ const CisnerosFormO = () => {
           onAnswer={handleAnswer}
           onSubmit={handleSubmit}
           loading={loading}
+          missingQuestionIds={missingQuestionIds}
         />
       </div>
     </div>

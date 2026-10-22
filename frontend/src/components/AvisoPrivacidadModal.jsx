@@ -70,18 +70,35 @@ const AvisoPrivacidadModal = ({ isOpen, onClose, onAccept, accepted, setAccepted
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.75rem',
+            justifyContent: 'space-between',
+            gap: '1rem',
             marginTop: '1.5rem',
             marginBottom: '1.5rem',
-            fontWeight: 600
+            fontWeight: 500,
+            cursor: 'pointer',
+            padding: '0.85rem 1.1rem',
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+            userSelect: 'none',
+            transition: 'background 0.2s ease'
           }}
         >
+          <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+            He leído y acepto los términos y acuerdos de privacidad.
+          </span>
           <input
             type="checkbox"
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
+            style={{
+              width: '1.25rem',
+              height: '1.25rem',
+              accentColor: '#22c55e',
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
           />
-          He leído y acepto los términos y acuerdos de privacidad.
         </label>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>

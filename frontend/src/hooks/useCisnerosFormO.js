@@ -12,6 +12,7 @@ export const useCisnerosForm = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [autorAcoso, setAutorAcoso] = useState('No aplica');
+
   const [anonimo, setAnonimo] = useState(true);
 
   const handleAutorAcosoChange = (e) => {
@@ -39,11 +40,18 @@ export const useCisnerosForm = () => {
     return missing;
   };
 
+
+
   const handleSubmit = async () => {
     const missingAnswers = validateAnswers();
 
     if (missingAnswers.length > 0) {
-      alert('Debes responder las 43 preguntas');
+      const message =
+        missingAnswers.length === 1
+            ? `Falta responder la pregunta ${missingAnswers[0]}.`
+            : `Faltan responder las preguntas: ${missingAnswers.join(',')}`;
+
+      alert(message);
       return;
     }
 

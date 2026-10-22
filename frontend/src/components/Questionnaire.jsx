@@ -1,6 +1,7 @@
 import { QuestionItem } from './QuestionItems';
 
-export const Questionnaire = ({ questions, answers, onAnswer, onBack, onSubmit, loading }) => {
+export const Questionnaire = ({ questions, answers, onAnswer, onBack, onSubmit, loading, missingQuestionIds = [] }) => {
+  const missingSet = new Set(missingQuestionIds);
   const isComplete = Object.keys(answers).filter((key) => answers[key] !== undefined).length === 43;
 
   return (
@@ -17,6 +18,7 @@ export const Questionnaire = ({ questions, answers, onAnswer, onBack, onSubmit, 
           question={q}
           selectedValue={answers[`q${q.id}`]}
           onSelect={onAnswer}
+          isMissing={missingSet.has(q.id)}
         />
       ))}
 
@@ -31,7 +33,7 @@ export const Questionnaire = ({ questions, answers, onAnswer, onBack, onSubmit, 
             Volver
           </button>
         )}
-        <button className="btn" onClick={onSubmit} disabled={loading || !isComplete} type="button">
+        <button className="btn" onClick={onSubmit} disabled={loading} type="button">
           {loading ? 'Calculando...' : 'Enviar Evaluación'}
         </button>
       </div>
