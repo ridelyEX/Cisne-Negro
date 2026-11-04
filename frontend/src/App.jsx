@@ -13,10 +13,17 @@ function App() {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const username = localStorage.getItem('username');
+    const respondentId = localStorage.getItem('respondent_id');
     const privacyAccepted = localStorage.getItem("privacyAccepted") === "true";
 
     if (token) {
-      setUser({ token, role, username, privacyAccepted });
+      setUser({
+        token,
+        role,
+        username,
+        respondent_id: respondentId ? Number(respondentId) : null,
+        privacyAccepted
+      });
     }
   }, []);
 
@@ -40,6 +47,7 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('username');
+    localStorage.removeItem('respondent_id');
     localStorage.removeItem('privacyAccepted');
     setUser(null);
   };

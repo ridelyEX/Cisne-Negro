@@ -26,9 +26,18 @@ export const NumEmpleadosSearch = ({ value, onChange, error }) => {
 
       setIsLoading(true);
       try {
+        const token = localStorage.getItem('token');
         const response = await fetch(
-          `${API_BASE_URL}/api/num-empleado/search?query=${encodeURIComponent(query)}`
+          `${API_BASE_URL}/api/num-empleado/search?query=${encodeURIComponent(query)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          }
         );
+        if (!response.ok) {
+          setEmpleados([]);
+          setIsOpen(false);
+          return;
+        }
         const data = await response.json();
         setEmpleados(data.empleados || []);
         setIsOpen(true);

@@ -42,13 +42,18 @@ export const useLoginForm = (onLogin) => {
         password
       });
 
-      const { token, role } = response.data;
+      const { token, role, respondent_id } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
       localStorage.setItem('username', usernameVal);
+      if (respondent_id !== undefined && respondent_id !== null) {
+        localStorage.setItem('respondent_id', String(respondent_id));
+      } else {
+        localStorage.removeItem('respondent_id');
+      }
 
       if (typeof onLogin === 'function') {
-        onLogin({ token, role, username: usernameVal });
+        onLogin({ token, role, username: usernameVal, respondent_id });
       }
     } catch (err) {
       const detail = err?.response?.data?.detail ?? 'Credenciales inválidas';
@@ -114,8 +119,8 @@ export const useLoginForm = (onLogin) => {
       });
 
       const respondentId = createRes.data?.id ?? createRes.data?.respondent_id;
-      if (respondentId) {
-        localStorage.setItem('respondent_id', respondentId);
+      if (respondentId !== undefined && respondentId !== null) {
+        localStorage.setItem('respondent_id', String(respondentId));
       }
 
       // Luego iniciar sesión con ese usuario recién creado
@@ -124,13 +129,18 @@ export const useLoginForm = (onLogin) => {
         password
       });
 
-      const { token, role } = loginRes.data;
+      const { token, role, respondent_id: loginRespondentId } = loginRes.data;
+      const finalRespondentId = respondentId ?? loginRespondentId;
+
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
       localStorage.setItem('username', usernameVal);
+      if (finalRespondentId !== undefined && finalRespondentId !== null) {
+        localStorage.setItem('respondent_id', String(finalRespondentId));
+      }
 
       if (typeof onLogin === 'function') {
-        onLogin({ token, role, username: usernameVal });
+        onLogin({ token, role, username: usernameVal, respondent_id: finalRespondentId });
       }
 
     } catch (err) {

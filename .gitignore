@@ -1,4 +1,7 @@
 .env
+*.pyc
+*.pyo
+__pycache__/
 venv/
 trash/
 CUESTIONARIO ESCALA CISNEROS 2022.pdf

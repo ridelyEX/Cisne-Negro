@@ -3,6 +3,7 @@ import datetime
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field, field_validator
 from typing import Dict, Literal
 
@@ -28,6 +29,35 @@ app.add_middleware(
 )
 
 SECRET_KEY = "cisneros_super_secret"
+
+security_scheme = HTTPBearer()
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="El token ha expirado")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    user_id = payload.get("user_id")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Token inválido: sin user_id")
+
+    user = db.query(User).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+
+    return user
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="No tienes permisos de administrador")
+    return current_user
 
 '''
 # Configuración de base de datos MySQL local
@@ -65,7 +95,7 @@ class SubmitDemographicData(BaseModel):
 
 
 class SubmitQuestionsData(BaseModel):
-    respondent_id: int
+    respondent_id: int | None = None
     autor_acoso: str = 'No aplica'
     anonimo: bool = True
     answers: Dict[str, int]
@@ -90,18 +120,39 @@ def login(data: LoginData, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(username=data.username).first()
 
     if user and verify_password(data.password, user.password_hash):
+        respondent = db.query(Respondent).filter_by(user_id=user.id).first()
+        respondent_id = respondent.id if respondent else None
+
         token = jwt.encode({
             'user_id': user.id,
             'role': user.role,
+            'respondent_id': respondent_id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }, SECRET_KEY, algorithm="HS256")
 
-        return {"token": token, "role": user.role, "message": "Login successful"}
+        return {
+            "token": token,
+            "role": user.role,
+            "respondent_id": respondent_id,
+            "message": "Login successful"
+        }
 
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @app.post("/api/Cuestionario-cisneros")
-def submit_evaluation(data: SubmitQuestionsData, db: Session = Depends(get_db)):
+def submit_evaluation(
+    data: SubmitQuestionsData,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    respondent = None
+    if data.respondent_id is not None:
+        respondent = db.query(Respondent).filter_by(id=data.respondent_id).first()
+    if not respondent:
+        respondent = db.query(Respondent).filter_by(user_id=current_user.id).first()
+    if not respondent:
+        raise HTTPException(status_code=404, detail="No se encontró el perfil de encuestado asociado al usuario")
+
     suma_total = 0
     neap = 0
     q_columns = {}
@@ -128,7 +179,7 @@ def submit_evaluation(data: SubmitQuestionsData, db: Session = Depends(get_db)):
 
     # Guardar evaluación
     evaluation = Evaluation(
-        respondent_id=data.respondent_id,
+        respondent_id=respondent.id,
         anonimo=data.anonimo,
         autor_acoso=data.autor_acoso,
         neap=neap,
@@ -191,7 +242,10 @@ def create_user(data: SubmitDemographicData, db: Session = Depends(get_db)):
     }
 
 @app.get("/api/statistics")
-def get_statistics(db: Session = Depends(get_db)):
+def get_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
     evaluations = db.query(Evaluation).all()
 
     total = len(evaluations)
@@ -216,7 +270,11 @@ def get_statistics(db: Session = Depends(get_db)):
     }
 
 @app.get("/api/num-empleado/search")
-def search_num_empleados(query: str = "", db: Session = Depends(get_db)):
+def search_num_empleados(
+    query: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     if query:
         users = db.query(User).filter(
             User.num_empleado.ilike(f"%{query}%")

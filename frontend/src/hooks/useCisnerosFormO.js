@@ -55,20 +55,30 @@ export const useCisnerosForm = () => {
       return;
     }
 
-    if (!respondentId) {
-      alert('No se encontró respondent_id. Debes crear el usuario antes de enviar el cuestionario.');
+    const storedRespondentId = localStorage.getItem('respondent_id');
+    const effectiveRespondentId = respondentId ?? (storedRespondentId ? Number(storedRespondentId) : null);
+
+    if (!effectiveRespondentId) {
+      alert('No se encontró respondent_id. Debes crear el usuario o iniciar sesión antes de enviar el cuestionario.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/Cuestionario-cisneros`, {
-        respondent_id: respondentId,
-        autor_acoso: autorAcoso,
-        anonimo,
-        answers
-      });
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_BASE_URL}/api/Cuestionario-cisneros`,
+        {
+          respondent_id: effectiveRespondentId,
+          autor_acoso: autorAcoso,
+          anonimo,
+          answers
+        },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        }
+      );
 
       setResult(response.data.results);
     } catch (error) {
