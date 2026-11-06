@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 
 export const useAvisoPrivacidad = (role) => {
-  const isEmployee = role !== 'admin';
+  const isEmployee = role !== 'admin' && role !== 'superadmin';
 
   const [isOpen, setIsOpen] = useState(false);
   const [accepted, setAccepted] = useState(

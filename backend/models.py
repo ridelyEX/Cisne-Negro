@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
@@ -9,8 +9,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False, default='user') # 'admin' or 'user'
-    num_empleado = Column (String(10), nullable=True)
+    role = Column(String(20), nullable=False, default='user') # 'superadmin', 'admin' or 'user'
+    num_empleado = Column(String(10), nullable=True)
 
     respondents = relationship("Respondent", back_populates="user")
 
@@ -31,11 +31,26 @@ class Respondent(Base):
 
     user = relationship("User", back_populates="respondents")
     evaluations = relationship("Evaluation", back_populates="respondent")
-    
+
+class SurveyStage(Base):
+    __tablename__ = 'survey_stages'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    instrument_name = Column(String(150), nullable=False, default='Barómetro de Cisneros')
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    target_applications = Column(Integer, nullable=False, default=1)
+    apply_to_all = Column(Boolean, default=True, nullable=False)
+    target_dependencia = Column(String(200), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    evaluations = relationship("Evaluation", back_populates="stage")
+
 class Evaluation(Base):
     __tablename__ = 'evaluations'
     id = Column(Integer, primary_key=True, autoincrement=True)
     respondent_id = Column(Integer, ForeignKey("respondents.id"), nullable=False) # Refers to Respondent.id
+    stage_id = Column(Integer, ForeignKey("survey_stages.id"), nullable=True) # Refers to SurveyStage.id
     anonimo = Column(Boolean, default=True, nullable=False)
 
     q1 = Column(Integer, nullable=False)
@@ -92,3 +107,4 @@ class Evaluation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     respondent = relationship("Respondent", back_populates="evaluations")
+    stage = relationship("SurveyStage", back_populates="evaluations")

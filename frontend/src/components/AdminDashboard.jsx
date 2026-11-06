@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Activity, Users, AlertTriangle } from 'lucide-react';
+import { Activity, Users, AlertTriangle, ShieldCheck } from 'lucide-react';
 import API_BASE_URL from '../constants/api';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const role = localStorage.getItem('role');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -35,9 +38,22 @@ const AdminDashboard = () => {
 
   return (
     <div className="container">
-      <div style={{ marginBottom: '2rem' }}>
-        <h1>Panel de Administración</h1>
-        <p>Estadísticas globales del Barómetro de Cisneros</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>Panel de Administración</h1>
+          <p style={{ marginTop: '0.5rem' }}>Estadísticas globales del Barómetro de Cisneros</p>
+        </div>
+
+        {role === 'superadmin' && (
+          <button
+            onClick={() => navigate('/superadmin')}
+            className="btn"
+            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem' }}
+          >
+            <ShieldCheck size={18} />
+            <span>Volver a Superadministrador</span>
+          </button>
+        )}
       </div>
 
       <div className="stats-grid">

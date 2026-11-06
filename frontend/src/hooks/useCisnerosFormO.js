@@ -40,8 +40,6 @@ export const useCisnerosForm = () => {
     return missing;
   };
 
-
-
   const handleSubmit = async () => {
     const missingAnswers = validateAnswers();
 
@@ -83,7 +81,8 @@ export const useCisnerosForm = () => {
       setResult(response.data.results);
     } catch (error) {
       console.error(error.response?.data ?? error);
-      alert('Error al enviar evaluación');
+      const detail = error.response?.data?.detail;
+      alert(typeof detail === 'string' ? detail : 'Error al enviar evaluación');
     } finally {
       setLoading(false);
     }

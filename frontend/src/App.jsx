@@ -4,6 +4,7 @@ import Login from './components/Login';
 import MenuPrincipal from './components/MenuPrincipal';
 import CisnerosFormO from './CisnerosFormO';
 import AdminDashboard from './components/AdminDashboard';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 import { ShieldAlert } from 'lucide-react';
 
 function App() {
@@ -28,17 +29,17 @@ function App() {
   }, []);
 
   const handleLogin = (userData) => {
-      const nextUser = {
-        ...userData,
-        privacyAccepted: localStorage.getItem("privacyAccepted") === "true"
-      };
+    const nextUser = {
+      ...userData,
+      privacyAccepted: localStorage.getItem("privacyAccepted") === "true"
+    };
     setUser(nextUser);
   };
 
   const handlePrivacyAccepted = () => {
     const nextUser = {
-        ...user,
-        privacyAccepted: true
+      ...user,
+      privacyAccepted: true
     };
     setUser(nextUser);
   };
@@ -52,6 +53,14 @@ function App() {
     setUser(null);
   };
 
+  const getDefaultRouteForRole = (role) => {
+    if (role === 'superadmin') return '/superadmin';
+    if (role === 'admin') return '/admin';
+    return '/menu';
+  };
+
+  const isAdminOrSuperAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
   return (
     <Router>
       <nav className="navbar">
@@ -61,7 +70,9 @@ function App() {
         </div>
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem'}}>
-            <span style={{ color: 'var(--text-secondary)' }}>Sesión: {user.username}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>
+              Sesión: {user.username} ({user.role})
+            </span>
             <button onClick={handleLogout} className="btn" style={{ width: 'auto', padding: '0.5rem 1rem' }}>
               Cerrar Sesión
             </button>
@@ -72,7 +83,7 @@ function App() {
       <Routes>
         <Route 
           path="/login" 
-          element={!user ? <Login onLogin={handleLogin} /> : <Navigate to={user.role === 'admin' ? '/admin' : '/menu'} />} 
+          element={!user ? <Login onLogin={handleLogin} /> : <Navigate to={getDefaultRouteForRole(user.role)} />} 
         />
 
         <Route
@@ -83,7 +94,7 @@ function App() {
         <Route 
           path="/cuestionario" 
           element={
-              user && user.role !== 'admin' && user.privacyAccepted
+              user && !isAdminOrSuperAdmin && user.privacyAccepted
               ? <CisnerosFormO />
               : <Navigate to="/menu" replace />
           }
@@ -91,7 +102,12 @@ function App() {
         
         <Route 
           path="/admin" 
-          element={user && user.role === 'admin' ? <AdminDashboard /> : <Navigate to="/login" />} 
+          element={user && isAdminOrSuperAdmin ? <AdminDashboard /> : <Navigate to="/login" />} 
+        />
+
+        <Route 
+          path="/superadmin" 
+          element={user && user.role === 'superadmin' ? <SuperAdminDashboard /> : <Navigate to="/login" />} 
         />
         
         <Route path="/" element={<Navigate to="/login" />} />
