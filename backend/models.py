@@ -11,6 +11,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default='user') # 'superadmin', 'admin' or 'user'
     num_empleado = Column(String(10), nullable=True)
+    dependencia = Column(String(200), nullable=True, default='Dirección de Obras Públicas')
 
     respondents = relationship("Respondent", back_populates="user")
 
@@ -41,6 +42,8 @@ class SurveyStage(Base):
     target_applications = Column(Integer, nullable=False, default=1)
     apply_to_all = Column(Boolean, default=True, nullable=False)
     target_dependencia = Column(String(200), nullable=True)
+    approval_status = Column(String(30), nullable=False, default='approved') # 'pending', 'approved', 'rejected'
+    requested_by = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -282,6 +282,20 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleReviewStage = async (stageId, action) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(
+        `${API_BASE_URL}/api/superadmin/stages/${stageId}/approval`,
+        { action },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      await fetchOverview();
+    } catch (err) {
+      console.error('Error revisando solicitud de etapa:', err);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     const list = overview?.users_table || [];
     const q = userSearch.trim().toLowerCase();
@@ -835,43 +849,102 @@ const SuperAdminDashboard = () => {
                       <th>Asignación / Dependencia</th>
                       <th>Periodo</th>
                       <th>Avance Muestra</th>
+                      <th>Aprobación</th>
                       <th>Estado</th>
                       <th>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {stages.map((st) => (
-                      <tr key={st.id}>
-                        <td>#{st.id}</td>
-                        <td><strong>{st.instrument_name}</strong></td>
-                        <td>
-                          <span className={st.apply_to_all === false ? 'badge badge-warning' : 'badge badge-neutral'}>
-                            {st.scope_label || (st.apply_to_all === false ? st.target_dependencia : 'Todos los usuarios')}
-                          </span>
-                        </td>
-                        <td>
-                          {formatDateShort(st.start_date)} al {formatDateShort(st.end_date)}
-                        </td>
-                        <td>
-                          {st.completed_applications} / {st.target_applications} ({st.completion_pct}%)
-                        </td>
-                        <td>
-                          <span className={st.is_active ? 'badge badge-success' : 'badge badge-neutral'}>
-                            {st.is_active ? 'Habilitada' : 'Pausada'}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStage(st.id)}
-                            className="tab-btn"
-                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
-                          >
-                            {st.is_active ? 'Deshabilitar' : 'Habilitar'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {stages.map((st) => {
+                      const appStatus = st.approval_status || 'approved';
+                      return (
+                        <tr key={st.id}>
+                          <td>#{st.id}</td>
+                          <td>
+                            <div><strong>{st.instrument_name}</strong></div>
+                            {st.requested_by && (
+                              <small style={{ color: 'var(--text-secondary)' }}>
+                                Solicitado por: {st.requested_by}
+                              </small>
+                            )}
+                          </td>
+                          <td>
+                            <span className={st.apply_to_all === false ? 'badge badge-warning' : 'badge badge-neutral'}>
+                              {st.scope_label || (st.apply_to_all === false ? st.target_dependencia : 'Todos los usuarios')}
+                            </span>
+                          </td>
+                          <td>
+                            {formatDateShort(st.start_date)} al {formatDateShort(st.end_date)}
+                          </td>
+                          <td>
+                            {st.completed_applications} / {st.target_applications} ({st.completion_pct}%)
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                appStatus === 'approved'
+                                  ? 'badge badge-success'
+                                  : appStatus === 'pending'
+                                    ? 'badge badge-warning'
+                                    : 'badge badge-danger'
+                              }
+                            >
+                              {appStatus === 'approved'
+                                ? 'Aprobada'
+                                : appStatus === 'pending'
+                                  ? 'Pendiente de Aprobación'
+                                  : 'Rechazada'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={st.is_active && appStatus === 'approved' ? 'badge badge-success' : 'badge badge-neutral'}>
+                              {st.is_active && appStatus === 'approved' ? 'Habilitada' : 'Pausada'}
+                            </span>
+                          </td>
+                          <td>
+                            {appStatus === 'pending' ? (
+                              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReviewStage(st.id, 'approve')}
+                                  className="tab-btn"
+                                  style={{
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.78rem',
+                                    borderColor: 'var(--success-color)',
+                                    color: 'var(--success-color)'
+                                  }}
+                                >
+                                  Aprobar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReviewStage(st.id, 'reject')}
+                                  className="tab-btn"
+                                  style={{
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.78rem',
+                                    borderColor: 'var(--danger-color)',
+                                    color: 'var(--danger-color)'
+                                  }}
+                                >
+                                  Rechazar
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStage(st.id)}
+                                className="tab-btn"
+                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                              >
+                                {st.is_active ? 'Deshabilitar' : 'Habilitar'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

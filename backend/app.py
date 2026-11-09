@@ -19,10 +19,15 @@ from models import Base, User, Respondent, Evaluation, SurveyStage
 Base.metadata.create_all(bind=engine)
 
 def ensure_schema_updates():
-    """Agrega columnas nuevas como stage_id en evaluations y apply_to_all/target_dependencia en survey_stages."""
+    """Agrega columnas nuevas como stage_id en evaluations, dependencia en users y campos de aprobación en survey_stages."""
     try:
         inspector = inspect(engine)
         tables = inspector.get_table_names()
+        if "users" in tables:
+            user_cols = [col["name"] for col in inspector.get_columns("users")]
+            if "dependencia" not in user_cols:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN dependencia VARCHAR(200) NULL DEFAULT 'Dirección de Obras Públicas'"))
         if "evaluations" in tables:
             columns = [col["name"] for col in inspector.get_columns("evaluations")]
             if "stage_id" not in columns:
@@ -35,6 +40,10 @@ def ensure_schema_updates():
                     conn.execute(text("ALTER TABLE survey_stages ADD COLUMN apply_to_all TINYINT(1) NOT NULL DEFAULT 1"))
                 if "target_dependencia" not in stage_cols:
                     conn.execute(text("ALTER TABLE survey_stages ADD COLUMN target_dependencia VARCHAR(200) NULL"))
+                if "approval_status" not in stage_cols:
+                    conn.execute(text("ALTER TABLE survey_stages ADD COLUMN approval_status VARCHAR(30) NOT NULL DEFAULT 'approved'"))
+                if "requested_by" not in stage_cols:
+                    conn.execute(text("ALTER TABLE survey_stages ADD COLUMN requested_by VARCHAR(100) NULL"))
     except Exception as e:
         print(f"Schema check warning: {e}")
 
@@ -154,6 +163,46 @@ class CreateStageData(BaseModel):
         return dep_val.strip() if dep_val else None
 
 
+class CreateAdminStageData(BaseModel):
+    instrument_name: str = Field(min_length=1, max_length=150)
+    start_date: date
+    end_date: date
+    target_applications: int = Field(ge=1)
+
+    @field_validator('end_date')
+    @classmethod
+    def validate_dates(cls, end_date_val, info):
+        start_date_val = info.data.get('start_date')
+        if start_date_val and end_date_val < start_date_val:
+            raise ValueError('La fecha de fin no puede ser anterior a la fecha de inicio')
+        return end_date_val
+
+
+class ApprovalActionData(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+
+
+def get_admin_dependencia(user: User, db: Session) -> str:
+    respondent = db.query(Respondent).filter_by(user_id=user.id).first()
+    if respondent and respondent.dependencia and respondent.dependencia.strip():
+        return respondent.dependencia.strip()
+    user_dep = getattr(user, "dependencia", None)
+    if user_dep and user_dep.strip():
+        return user_dep.strip()
+    return "Dirección de Obras Públicas"
+
+
+def respondent_belongs_to_dependencia(respondent: Optional[Respondent], dependencia_name: str) -> bool:
+    if not respondent:
+        return False
+    dep_norm = (dependencia_name or "").strip().lower()
+    if not dep_norm:
+        return True
+    r_dep = (respondent.dependencia or "").strip().lower()
+    r_coord = (respondent.coordinacion or "").strip().lower()
+    return dep_norm in (r_dep, r_coord)
+
+
 def compute_evaluations_metrics(evaluations: list[Evaluation]):
     total = len(evaluations)
     leve = len([e for e in evaluations if e.risk_level == "Leve o inexistente"])
@@ -204,6 +253,8 @@ def serialize_stage(stage: SurveyStage, all_evaluations: list[Evaluation]):
     if apply_to_all is None:
         apply_to_all = True
     target_dep = getattr(stage, "target_dependencia", None)
+    approval_status = getattr(stage, "approval_status", "approved") or "approved"
+    requested_by = getattr(stage, "requested_by", None)
 
     return {
         "id": stage.id,
@@ -219,8 +270,10 @@ def serialize_stage(stage: SurveyStage, all_evaluations: list[Evaluation]):
         "apply_to_all": bool(apply_to_all),
         "target_dependencia": target_dep if not apply_to_all else None,
         "scope_label": "Todos los usuarios" if apply_to_all else (target_dep or "Dependencia específica"),
+        "approval_status": approval_status,
+        "requested_by": requested_by,
         "is_active": stage.is_active,
-        "is_currently_open": bool(stage.is_active and in_date_range),
+        "is_currently_open": bool(stage.is_active and approval_status == "approved" and in_date_range),
         "averages": metrics["averages"],
         "risk_distribution": metrics["risk_distribution"],
         "created_at": stage.created_at.isoformat() if stage.created_at else None,
@@ -253,6 +306,9 @@ def login(data: LoginData, db: Session = Depends(get_db)):
 
 
 def stage_matches_respondent(stage: SurveyStage, respondent: Optional[Respondent]) -> bool:
+    approval_status = getattr(stage, "approval_status", "approved") or "approved"
+    if approval_status != "approved":
+        return False
     apply_all = getattr(stage, "apply_to_all", True)
     if apply_all is None or apply_all:
         return True
@@ -471,6 +527,8 @@ def create_survey_stage(
         target_applications=data.target_applications,
         apply_to_all=data.apply_to_all,
         target_dependencia=None if data.apply_to_all else data.target_dependencia,
+        approval_status="approved",
+        requested_by=current_user.username,
         is_active=data.is_active
     )
     db.add(new_stage)
@@ -481,6 +539,248 @@ def create_survey_stage(
     return {
         "message": "Etapa de cuestionario creada exitosamente",
         "stage": serialize_stage(new_stage, all_evaluations)
+    }
+
+
+@app.patch("/api/superadmin/stages/{stage_id}/approval")
+def review_survey_stage(
+    stage_id: int,
+    data: ApprovalActionData,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superadmin)
+):
+    stage = db.query(SurveyStage).filter_by(id=stage_id).first()
+    if not stage:
+        raise HTTPException(status_code=404, detail="Etapa no encontrada")
+
+    if data.action == "approve":
+        stage.approval_status = "approved"
+        stage.is_active = True
+        msg = "Etapa aprobada y habilitada exitosamente"
+    else:
+        stage.approval_status = "rejected"
+        stage.is_active = False
+        msg = "Solicitud de etapa rechazada"
+
+    db.commit()
+    db.refresh(stage)
+
+    all_evaluations = db.query(Evaluation).all()
+    return {
+        "message": msg,
+        "stage": serialize_stage(stage, all_evaluations)
+    }
+
+
+@app.post("/api/admin/stages")
+def create_admin_survey_stage(
+    data: CreateAdminStageData,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    admin_dep = get_admin_dependencia(current_user, db)
+    is_super = current_user.role == "superadmin"
+
+    new_stage = SurveyStage(
+        instrument_name=data.instrument_name,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        target_applications=data.target_applications,
+        apply_to_all=False,
+        target_dependencia=admin_dep,
+        approval_status="approved" if is_super else "pending",
+        requested_by=current_user.username,
+        is_active=True if is_super else False
+    )
+    db.add(new_stage)
+    db.commit()
+    db.refresh(new_stage)
+
+    all_evaluations = db.query(Evaluation).all()
+    return {
+        "message": (
+            "Etapa creada y enviada para aprobación del Superadministrador"
+            if not is_super
+            else "Etapa creada y aprobada exitosamente"
+        ),
+        "stage": serialize_stage(new_stage, all_evaluations)
+    }
+
+
+@app.get("/api/admin/overview")
+def get_admin_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    admin_dep = get_admin_dependencia(current_user, db)
+
+    all_users = db.query(User).all()
+    all_respondents = db.query(Respondent).order_by(Respondent.id.desc()).all()
+    all_evaluations = db.query(Evaluation).order_by(Evaluation.created_at.desc()).all()
+    all_stages = db.query(SurveyStage).order_by(SurveyStage.start_date.desc(), SurveyStage.id.desc()).all()
+
+    user_by_id = {u.id: u for u in all_users}
+    stage_by_id = {s.id: s for s in all_stages}
+
+    # Filtrar encuestados exclusivamente de la dependencia del administrador
+    dep_respondents = [
+        r for r in all_respondents
+        if respondent_belongs_to_dependencia(r, admin_dep)
+    ]
+    dep_respondent_by_id = {r.id: r for r in dep_respondents}
+
+    # Filtrar evaluaciones exclusivamente de los usuarios de esa dependencia
+    dep_evaluations = [
+        ev for ev in all_evaluations
+        if ev.respondent_id in dep_respondent_by_id
+    ]
+
+    eval_count_by_respondent = {}
+    for ev in dep_evaluations:
+        eval_count_by_respondent[ev.respondent_id] = eval_count_by_respondent.get(ev.respondent_id, 0) + 1
+
+    # 3. Tabla de datos personales de los usuarios de su dependencia
+    users_table = []
+    for r in dep_respondents:
+        u = user_by_id.get(r.user_id)
+        count_evals = eval_count_by_respondent.get(r.id, 0)
+        users_table.append({
+            "respondent_id": r.id,
+            "user_id": r.user_id,
+            "username": u.username if u else "—",
+            "num_empleado": u.num_empleado if u and u.num_empleado else "—",
+            "nombres": r.nombres,
+            "apellido_p": r.apellido_p,
+            "apellido_m": r.apellido_m,
+            "nombre_completo": f"{r.nombres} {r.apellido_p} {r.apellido_m}".strip(),
+            "curp": r.curp,
+            "dependencia": r.dependencia,
+            "coordinacion": r.coordinacion,
+            "departamento": r.departamento,
+            "puesto": r.puesto,
+            "cargo": r.cargo or "—",
+            "has_answered": count_evals > 0,
+            "evaluations_count": count_evals,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        })
+
+    # 4. Tabla de resultados nominales (ocultando nombre y número de empleado si marcó anónimo)
+    evaluations_table = []
+    for ev in dep_evaluations:
+        r = dep_respondent_by_id.get(ev.respondent_id)
+        u = user_by_id.get(r.user_id) if r else None
+        st = stage_by_id.get(ev.stage_id) if ev.stage_id else None
+        is_anon = bool(ev.anonimo)
+
+        evaluations_table.append({
+            "evaluation_id": ev.id,
+            "respondent_id": None if is_anon else ev.respondent_id,
+            "num_empleado": "Anónimo" if is_anon else (u.num_empleado if u and u.num_empleado else "—"),
+            "username": "Anónimo" if is_anon else (u.username if u else "—"),
+            "nombre_completo": "Anónimo" if is_anon else (f"{r.nombres} {r.apellido_p} {r.apellido_m}".strip() if r else "—"),
+            "curp": "Anónimo" if is_anon else (r.curp if r else "—"),
+            "dependencia": r.dependencia if r else admin_dep,
+            "coordinacion": r.coordinacion if r else "—",
+            "departamento": r.departamento if r else "—",
+            "puesto": r.puesto if r else "—",
+            "cargo": r.cargo if r and r.cargo else "—",
+            "anonimo": is_anon,
+            "autor_acoso": ev.autor_acoso,
+            "neap": ev.neap,
+            "imap_score": round(ev.imap_score, 2),
+            "igap_score": round(ev.igap_score, 2),
+            "risk_level": ev.risk_level,
+            "stage_id": ev.stage_id,
+            "instrument_name": st.instrument_name if st else "Barómetro de Cisneros",
+            "stage_period": f"{st.start_date.isoformat()} al {st.end_date.isoformat()}" if st else "Sin etapa asignada",
+            "created_at": ev.created_at.isoformat() if ev.created_at else None,
+        })
+
+    # 5. Tabla general y distribución de riesgo de su dependencia, separada por departamentos
+    dep_metrics = compute_evaluations_metrics(dep_evaluations)
+
+    deptos_map = {}
+    for r in dep_respondents:
+        depto_name = (r.departamento or "Sin departamento").strip()
+        coord_name = (r.coordinacion or "General").strip()
+        if depto_name not in deptos_map:
+            deptos_map[depto_name] = {
+                "departamento": depto_name,
+                "coordinacion": coord_name,
+                "dependencia": r.dependencia or admin_dep,
+                "respondents_count": 0,
+                "evaluations": []
+            }
+        deptos_map[depto_name]["respondents_count"] += 1
+
+    for ev in dep_evaluations:
+        r = dep_respondent_by_id.get(ev.respondent_id)
+        depto_name = (r.departamento if r and r.departamento else "Sin departamento").strip()
+        coord_name = (r.coordinacion if r and r.coordinacion else "General").strip()
+        if depto_name not in deptos_map:
+            deptos_map[depto_name] = {
+                "departamento": depto_name,
+                "coordinacion": coord_name,
+                "dependencia": r.dependencia if r else admin_dep,
+                "respondents_count": 0,
+                "evaluations": []
+            }
+        deptos_map[depto_name]["evaluations"].append(ev)
+
+    risk_by_departamento = []
+    total_meta_deptos = 0
+    for depto_key, depto_info in deptos_map.items():
+        m = compute_evaluations_metrics(depto_info["evaluations"])
+        contestadas = m["total_evaluations"]
+        meta_depto = max(depto_info["respondents_count"], contestadas)
+        total_meta_deptos += meta_depto
+
+        risk_by_departamento.append({
+            "departamento": depto_info["departamento"],
+            "coordinacion": depto_info["coordinacion"],
+            "dependencia": depto_info["dependencia"],
+            "meta_evaluaciones": meta_depto,
+            "contestadas": contestadas,
+            "leve": m["risk_distribution"]["leve"],
+            "medio": m["risk_distribution"]["medio"],
+            "grave": m["risk_distribution"]["grave"],
+            "imap": m["averages"]["imap"],
+            "igap": m["averages"]["igap"],
+            "neap": m["averages"]["neap"],
+        })
+
+    # 2. Etapas aplicables a la dependencia del administrador (globales o asignadas a su dependencia)
+    admin_dep_norm = admin_dep.strip().lower()
+    dep_stages = [
+        s for s in all_stages
+        if getattr(s, "apply_to_all", True)
+        or (getattr(s, "target_dependencia", None) or "").strip().lower() == admin_dep_norm
+    ]
+    serialized_dep_stages = [serialize_stage(s, dep_evaluations) for s in dep_stages]
+
+    return {
+        "role": current_user.role,
+        "dependencia": admin_dep,
+        "summary": {
+            "total_respondents": len(dep_respondents),
+            "total_evaluations": len(dep_evaluations),
+            "total_stages": len(serialized_dep_stages),
+        },
+        "users_table": users_table,
+        "evaluations_table": evaluations_table,
+        "risk_overview": {
+            "dependencia": admin_dep,
+            "total_evaluations": dep_metrics["total_evaluations"],
+            "total_meta_evaluaciones": total_meta_deptos,
+            "total_departamentos": len(risk_by_departamento),
+            "risk_distribution": dep_metrics["risk_distribution"],
+            "averages": dep_metrics["averages"],
+            "by_departamento": risk_by_departamento,
+        },
+        "stages": serialized_dep_stages,
+        "available_instruments": [
+            "Barómetro de Cisneros"
+        ]
     }
 
 
