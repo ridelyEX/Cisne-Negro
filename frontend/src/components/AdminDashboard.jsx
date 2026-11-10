@@ -646,7 +646,7 @@ const AdminDashboard = () => {
           2. GENERAR ETAPA DE CUESTIONARIO (SOLO PARA SU DEPENDENCIA Y SUJETA A APROBACIÓN)
          ===================================================================== */}
       {activeTab === 'etapas' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div className="glass-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
               <CalendarPlus size={24} color="var(--primary-color)" />

@@ -678,7 +678,7 @@ const SuperAdminDashboard = () => {
           MÓDULO 1 Y 2: GENERAR NUEVA ETAPA DE CUESTIONARIOS Y PERIODO DE FECHAS
          ===================================================================== */}
       {activeTab === 'etapas' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div className="glass-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
               <CalendarPlus size={24} color="var(--primary-color)" />
