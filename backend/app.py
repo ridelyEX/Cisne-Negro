@@ -964,19 +964,7 @@ def get_superadmin_overview(
 
     default_dependencias = [
         "Dirección de Obras Públicas",
-        "Coordinación de Gestión Integral, Evaluación y Modernización",
-        "Coordinación de Vinculación Social",
-        "Coordinación Administrativa",
-        "Coordinación Jurídica",
-        "Subdirección de Infraestructura",
-        "Subdirección de Estudios y Proyectos",
-        "Despacho del director de obras públicas",
     ]
-    for r in respondents:
-        if r.dependencia and r.dependencia.strip() not in default_dependencias:
-            default_dependencias.append(r.dependencia.strip())
-        if r.coordinacion and r.coordinacion.strip() not in default_dependencias:
-            default_dependencias.append(r.coordinacion.strip())
 
     return {
         "role": current_user.role,

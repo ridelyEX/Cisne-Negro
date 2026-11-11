@@ -21,6 +21,10 @@ const INSTRUMENT_OPTIONS = [
   'Otro instrumento'
 ];
 
+const PREDEFINED_DEPENDENCIAS = [
+  'Dirección de Obras Públicas'
+];
+
 const formatDateShort = (isoDate) => {
   if (!isoDate) return '—';
   const [y, m, d] = isoDate.split('-');
@@ -110,6 +114,7 @@ const SuperAdminDashboard = () => {
   // Estado para búsqueda en tablas (Requerimiento 3)
   const [userSearch, setUserSearch] = useState('');
   const [evalSearch, setEvalSearch] = useState('');
+  const [areaFilterSelect, setAreaFilterSelect] = useState('');
 
   // Estado para filtros en cascada del Dashboard / Bitácora (Requerimiento 4)
   const [selectedYear, setSelectedYear] = useState('');
@@ -323,6 +328,49 @@ const SuperAdminDashboard = () => {
         ev.autor_acoso.toLowerCase().includes(q)
     );
   }, [overview, evalSearch]);
+
+  const filteredAreas = useMemo(() => {
+    const list = overview?.risk_overview?.by_dependencia || [];
+    if (!areaFilterSelect) return list;
+    return list.filter((row) => row.dependencia === areaFilterSelect);
+  }, [overview, areaFilterSelect]);
+
+  const filteredAreasSummary = useMemo(() => {
+    const countAreas = filteredAreas.length;
+    let metaTotal = 0;
+    let contestadasTotal = 0;
+    let leveTotal = 0;
+    let medioTotal = 0;
+    let graveTotal = 0;
+    let weightedImap = 0;
+    let weightedIgap = 0;
+    let weightedNeap = 0;
+
+    filteredAreas.forEach((r) => {
+      const m = r.meta_evaluaciones ?? r.total ?? 0;
+      const c = r.contestadas ?? r.total ?? 0;
+      metaTotal += m;
+      contestadasTotal += c;
+      leveTotal += r.leve || 0;
+      medioTotal += r.medio || 0;
+      graveTotal += r.grave || 0;
+      weightedImap += (Number(r.imap) || 0) * c;
+      weightedIgap += (Number(r.igap) || 0) * c;
+      weightedNeap += (Number(r.neap) || 0) * c;
+    });
+
+    return {
+      countAreas,
+      metaTotal,
+      contestadasTotal,
+      leveTotal,
+      medioTotal,
+      graveTotal,
+      avgImap: contestadasTotal > 0 ? (weightedImap / contestadasTotal).toFixed(2) : 0,
+      avgIgap: contestadasTotal > 0 ? (weightedIgap / contestadasTotal).toFixed(2) : 0,
+      avgNeap: contestadasTotal > 0 ? (weightedNeap / contestadasTotal).toFixed(2) : 0
+    };
+  }, [filteredAreas]);
 
   if (loading && !overview) {
     return (
@@ -757,18 +805,7 @@ const SuperAdminDashboard = () => {
                     onChange={(e) => setTargetDependencia(e.target.value)}
                     required
                   >
-                    {(
-                      overview?.available_dependencias || [
-                        'Dirección de Obras Públicas',
-                        'Coordinación de Gestión Integral, Evaluación y Modernización',
-                        'Coordinación de Vinculación Social',
-                        'Coordinación Administrativa',
-                        'Coordinación Jurídica',
-                        'Subdirección de Infraestructura',
-                        'Subdirección de Estudios y Proyectos',
-                        'Despacho del director de obras públicas'
-                      ]
-                    ).map((dep) => (
+                    {PREDEFINED_DEPENDENCIAS.map((dep) => (
                       <option key={dep} value={dep}>
                         {dep}
                       </option>
@@ -1203,10 +1240,28 @@ const SuperAdminDashboard = () => {
 
           {/* Tabla General de Riesgo desglosada por Áreas */}
           <div className="glass-card">
-            <h2 style={{ marginBottom: '0.5rem' }}>Tabla General de Riesgo por Áreas</h2>
-            <p style={{ marginBottom: '1.25rem' }}>
-              Distribución de riesgo, meta de aplicaciones, evaluaciones contestadas e índices promedio (IGAP, IMAP y NEAP) agrupados por área (dependencia, dirección o subdirección).
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ marginBottom: '0.5rem' }}>Tabla General de Riesgo por Áreas</h2>
+                <p style={{ margin: 0 }}>
+                  Distribución de riesgo, meta de aplicaciones, evaluaciones contestadas e índices promedio (IGAP, IMAP y NEAP) agrupados por área (dependencia, dirección o subdirección).
+                </p>
+              </div>
+
+              <div style={{ minWidth: '280px' }}>
+                <select
+                  value={areaFilterSelect}
+                  onChange={(e) => setAreaFilterSelect(e.target.value)}
+                >
+                  <option value="">Todas las dependencias</option>
+                  {PREDEFINED_DEPENDENCIAS.map((dep) => (
+                    <option key={dep} value={dep}>
+                      {dep}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             <div className="table-wrapper">
               <table className="data-table">
@@ -1235,15 +1290,15 @@ const SuperAdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {riskOverview.by_dependencia.length === 0 ? (
+                  {filteredAreas.length === 0 ? (
                     <tr>
                       <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                        Sin datos de áreas registradas para mostrar.
+                        No se encontraron áreas con ese criterio de búsqueda.
                       </td>
                     </tr>
                   ) : (
                     <>
-                      {riskOverview.by_dependencia.map((row, idx) => {
+                      {filteredAreas.map((row, idx) => {
                         const metaVal = row.meta_evaluaciones ?? row.total ?? 0;
                         const contestadasVal = row.contestadas ?? row.total ?? 0;
                         return (
@@ -1254,52 +1309,59 @@ const SuperAdminDashboard = () => {
                                 <small style={{ color: 'var(--text-secondary)' }}>{row.dependencia}</small>
                               )}
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <strong>{metaVal}</strong>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className={contestadasVal >= metaVal && metaVal > 0 ? 'badge badge-success' : 'badge badge-neutral'}>
                                 {contestadasVal}
                               </span>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className="badge badge-success">{row.leve}</span>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className="badge badge-warning">{row.medio}</span>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className="badge badge-danger">{row.grave}</span>
                             </td>
-                            <td><strong>{row.igap}</strong></td>
-                            <td><strong>{row.imap}</strong></td>
-                            <td>{row.neap}</td>
+                            <td style={{ textAlign: 'center' }}><strong>{row.igap}</strong></td>
+                            <td style={{ textAlign: 'center' }}><strong>{row.imap}</strong></td>
+                            <td style={{ textAlign: 'center' }}>{row.neap}</td>
                           </tr>
                         );
                       })}
                       <tr style={{ background: 'rgba(79, 70, 229, 0.14)', fontWeight: 700 }}>
                         <td>
-                          Total de todas las áreas ({riskOverview.total_areas ?? riskOverview.by_dependencia.length})
+                          {areaFilterSelect
+                            ? `Total de áreas en ${areaFilterSelect} (${filteredAreasSummary.countAreas})`
+                            : `Total de todas las áreas (${riskOverview.total_areas ?? riskOverview.by_dependencia.length})`}
                         </td>
-                        <td>
-                          {riskOverview.total_meta_evaluaciones ??
-                            riskOverview.by_dependencia.reduce((acc, r) => acc + (r.meta_evaluaciones ?? r.total ?? 0), 0)}
+                        <td style={{ textAlign: 'center' }}>
+                          {filteredAreasSummary.metaTotal}
                         </td>
-                        <td>
-                          {riskOverview.total_evaluations}
+                        <td style={{ textAlign: 'center' }}>
+                          {filteredAreasSummary.contestadasTotal}
                         </td>
-                        <td>
-                          <span className="badge badge-success">{riskOverview.risk_distribution.leve}</span>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="badge badge-success">{filteredAreasSummary.leveTotal}</span>
                         </td>
-                        <td>
-                          <span className="badge badge-warning">{riskOverview.risk_distribution.medio}</span>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="badge badge-warning">{filteredAreasSummary.medioTotal}</span>
                         </td>
-                        <td>
-                          <span className="badge badge-danger">{riskOverview.risk_distribution.grave}</span>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="badge badge-danger">{filteredAreasSummary.graveTotal}</span>
                         </td>
-                        <td>{riskOverview.averages.igap}</td>
-                        <td>{riskOverview.averages.imap}</td>
-                        <td>{riskOverview.averages.neap}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          {areaFilterSelect ? filteredAreasSummary.avgIgap : riskOverview.averages.igap}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {areaFilterSelect ? filteredAreasSummary.avgImap : riskOverview.averages.imap}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {areaFilterSelect ? filteredAreasSummary.avgNeap : riskOverview.averages.neap}
+                        </td>
                       </tr>
                     </>
                   )}

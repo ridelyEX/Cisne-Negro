@@ -1173,26 +1173,26 @@ const AdminDashboard = () => {
                                 <small style={{ color: 'var(--text-secondary)' }}>{row.coordinacion}</small>
                               )}
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <strong>{metaVal}</strong>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className={contestadasVal >= metaVal && metaVal > 0 ? 'badge badge-success' : 'badge badge-neutral'}>
                                 {contestadasVal}
                               </span>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className="badge badge-success">{row.leve}</span>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className="badge badge-warning">{row.medio}</span>
                             </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <span className="badge badge-danger">{row.grave}</span>
                             </td>
-                            <td><strong>{row.igap}</strong></td>
-                            <td><strong>{row.imap}</strong></td>
-                            <td>{row.neap}</td>
+                            <td style={{ textAlign: 'center' }}><strong>{row.igap}</strong></td>
+                            <td style={{ textAlign: 'center' }}><strong>{row.imap}</strong></td>
+                            <td style={{ textAlign: 'center' }}>{row.neap}</td>
                           </tr>
                         );
                       })}
@@ -1200,25 +1200,25 @@ const AdminDashboard = () => {
                         <td>
                           Total Global de la Dependencia ({adminDependencia} — {riskOverview.total_departamentos ?? riskOverview.by_departamento.length} departamentos)
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           {riskOverview.total_meta_evaluaciones ??
                             riskOverview.by_departamento.reduce((acc, r) => acc + (r.meta_evaluaciones ?? 0), 0)}
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           {riskOverview.total_evaluations}
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <span className="badge badge-success">{riskOverview.risk_distribution.leve}</span>
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <span className="badge badge-warning">{riskOverview.risk_distribution.medio}</span>
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <span className="badge badge-danger">{riskOverview.risk_distribution.grave}</span>
                         </td>
-                        <td>{riskOverview.averages.igap}</td>
-                        <td>{riskOverview.averages.imap}</td>
-                        <td>{riskOverview.averages.neap}</td>
+                        <td style={{ textAlign: 'center' }}>{riskOverview.averages.igap}</td>
+                        <td style={{ textAlign: 'center' }}>{riskOverview.averages.imap}</td>
+                        <td style={{ textAlign: 'center' }}>{riskOverview.averages.neap}</td>
                       </tr>
                     </>
                   )}
