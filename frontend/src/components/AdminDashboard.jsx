@@ -1131,20 +1131,26 @@ const AdminDashboard = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th rowSpan={2}>Departamentos ({adminDependencia})</th>
-                    <th colSpan={2} style={{ textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>
+                    <th rowSpan={2}>Departamentos <br></br> ({adminDependencia})</th>
+                     <th colSpan={2} style={{ textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>
                       Total Evaluaciones
                     </th>
-                    <th rowSpan={2}>Leve o inexistente</th>
-                    <th rowSpan={2}>Medio</th>
-                    <th rowSpan={2}>Grave a muy grave</th>
-                    <th rowSpan={2}>IGAP Promedio</th>
-                    <th rowSpan={2}>IMAP Promedio</th>
-                    <th rowSpan={2}>NEAP Promedio</th>
+                    <th colSpan={3} style={{ textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>
+                      Niveles de peligro
+                    </th>
+                    <th colSpan={3} style={{ textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>
+                      Indicadores
+                    </th>
                   </tr>
                   <tr>
-                    <th>Meta de Encuestas/Evaluaciones</th>
-                    <th>Encuestas/Evaluaciones Contestadas</th>
+                    <th className="col-divider">Meta</th>
+                    <th>Contestadas</th>
+                    <th className="col-divider">Leve o inexistente</th>
+                    <th>Medio</th>
+                    <th>Grave a muy grave</th>
+                    <th className="col-divider">IGAP Promedio</th>
+                    <th>IMAP Promedio</th>
+                    <th>NEAP Promedio</th>
                   </tr>
                 </thead>
                 <tbody>
